@@ -1,0 +1,53 @@
+# TLDs commonly associated with higher abuse/risk for business purposes.
+# One normalized TLD per line. Lines starting with '#' are comments.
+# This list is a conservative heuristic used only for domain classification,
+# NEVER for authoritative policy.
+tk
+ml
+ga
+cf
+gq
+xyz
+top
+click
+link
+party
+gdn
+icu
+trade
+win
+bid
+loan
+men
+rest
+wang
+club
+country
+science
+stream
+download
+racing
+date
+faith
+accountant
+cam
+work
+space
+site
+website
+online
+tech
+live
+store
+shop
+fun
+cyou
+lol
+zip
+mov
+kim
+review
+surf
+press
+rocks
+breed

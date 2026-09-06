@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+*.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Testing / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+pip-wheel-metadata/
+
+# IDEs / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build / archive artifacts
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tgz
+*.whl
+
+# Local runtime data
+*.db
+*.sqlite
+*.sqlite3
+data/*.redis
+
+# SDKs are generated from OpenAPI; commit only if repository policy requires it.
+sdk/
+
+# Scratch docs kept out of version control by convention.
+tasks.md
+Tasks.md

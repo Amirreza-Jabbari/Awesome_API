@@ -1,0 +1,46 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: awesome-api:latest
+    container_name: awesome-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      DNS_NAMESERVERS: "1.1.1.1,1.0.0.1"
+      CACHE_ENABLED: "true"
+      REDIS_URL: "redis://redis:6379/0"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_REQUESTS: "60"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+      METRICS_ENABLED: "false"
+      # Default GeoIP provider is "free" (ipwho.is + ipapi.is + RDAP).
+      # It requires no API key. Other supported providers: "ip-api", "maxmind".
+      GEOIP_PROVIDER: "free"
+    depends_on:
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: awesome-api-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
