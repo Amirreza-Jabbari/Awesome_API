@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Base stage: install only Python runtime deps (cached layer) ----
-FROM python:3.12-slim AS base
+FROM python:3.11-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -10,20 +10,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# ---- Builder stage: install project + dev tooling for linting ----
+# ---- Builder stage: install runtime dependencies only (cached on pyproject change) ----
 FROM base AS builder
 
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install dependencies first (cache layer bust only on pyproject change).
-COPY pyproject.toml ./
-RUN python -m pip install ".[dev]"
+# Build metadata requires the README; runtime deps only, no dev tooling leaks
+# into the production image.
+COPY pyproject.toml README.md ./
+RUN python -m pip install .
 
 # ---- Runtime stage: slim, non-root ----
 FROM base AS runtime
 
 # Copy the installed site-packages from the builder stage.
-COPY --from=builder --chown=app:app /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder --chown=app:app /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder --chown=app:app /usr/local/bin /usr/local/bin
 
 # Create a non-root user, then install the exact Chromium binary and OS dependencies
