@@ -13,7 +13,12 @@ def _resolve_schema(schema: dict[str, Any], components: dict[str, Any]) -> dict[
     if not isinstance(ref, str) or not ref.startswith("#/components/schemas/"):
         return schema
     name = ref.rsplit("/", 1)[-1]
-    return components.get("schemas", {}).get(name, {}) if isinstance(components, dict) else {}
+    schemas = components.get("schemas") if isinstance(components, dict) else None
+    if isinstance(schemas, dict):
+        resolved = schemas.get(name)
+        if isinstance(resolved, dict):
+            return resolved
+    return {}
 
 
 def _example(schema: dict[str, Any], components: dict[str, Any], name: str = "") -> Any:
@@ -217,7 +222,9 @@ def customize_openapi(app: FastAPI) -> dict[str, Any]:
                                         "summary": "Standard error",
                                         "value": {
                                             "error": {
-                                                "code": "RATE_LIMITED" if code == "429" else "INTERNAL_ERROR",
+                                                "code": (
+                                        "RATE_LIMITED" if code == "429" else "INTERNAL_ERROR"
+                                    ),
                                                 "message": (
                                                     "Too many requests. Please try again later."
                                                     if code == "429"
