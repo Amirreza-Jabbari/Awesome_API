@@ -2,19 +2,20 @@
 
 > One self-hostable REST API for developer, security and networking utilities —
 > email validation, DNS / WHOIS intelligence, HTTP & TLS inspection, password
-> generation, encoding, codecs, cron, JWT and much more. SSRF-hardened,
-> rate-limited, cached, observable, and fully offline-testable.
+> generation, encoding, codecs, cron, JWT, local image conversion (resize, PDF,
+> background removal) and much more. SSRF-hardened, rate-limited, cached,
+> observable, and fully offline-testable.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)
 ![FastAPI](https://img.shields.io/badge/Framework-FastAPI-009688.svg)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
-![Tests](https://img.shields.io/badge/Tests-280%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/Tests-305%20passing-2ea44f)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
 [![CI](https://github.com/Amirreza-Jabbari/Awesome_API/actions/workflows/ci.yml/badge.svg)](https://github.com/Amirreza-Jabbari/Awesome_API/actions/workflows/ci.yml)
 
-**69 utility endpoints** behind a single versioned boundary (`/api/v1`),
-organized into 11 categories. Built on a swappable provider architecture so
+**74 utility endpoints** behind a single versioned boundary (`/api/v1`),
+organized into 12 categories. Built on a swappable provider architecture so
 real backends (DNS, WHOIS/RDAP, GeoIP) can be replaced without touching the
 route surface. Includes Playwright/Chromium for browser-rendered web analysis.
 
@@ -39,6 +40,10 @@ route surface. Includes Playwright/Chromium for browser-rendered web analysis.
 - **Browser intelligence** — accessibility audit, Core Web Vitals estimation,
   design-system extraction, screenshots and API discovery rendered in isolated
   Chromium (installed in the Docker image, never during a request).
+- **Local image processing** — in-memory raster conversion, image→PDF and
+  PDF→image ZIP, PSD flattening, HEIC/HEIF decode, target-size compression and
+  optional AI background removal, all under hard timeouts and byte/pixel
+  budgets with metadata (EXIF/GPS) stripped on output.
 
 ## Quick Start
 
@@ -70,7 +75,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # or: make dev
 ```
 
-> **Requirements:** Python 3.11+ (the Docker image uses 3.12). Redis is
+> **Requirements:** Python 3.11+ (the Docker image uses 3.11). Redis is
 > optional and only needed for shared caching / multi-instance rate limiting.
 
 ## Examples
