@@ -103,8 +103,7 @@ class FileMetadataService:
             "description": desc,
         }
 
-    @staticmethod
-    def extract_image_metadata(data_b64: str, filename: str | None = None) -> dict[str, Any]:
+    def extract_image_metadata(self, data_b64: str, filename: str | None = None) -> dict[str, Any]:
         try:
             raw = base64.b64decode(data_b64, validate=True)
         except Exception:
