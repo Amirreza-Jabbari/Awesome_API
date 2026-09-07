@@ -97,6 +97,9 @@ app = ["py.typed"]
 line-length = 100
 target-version = "py311"
 src = ["app", "tests"]
+# imgcompress/ is a local-only, untracked reference project used during
+# development. These entries simply keep it out of the lint/typecheck scans; the
+# application has zero code dependency on it and nothing breaks if it is removed.
 exclude = ["Tasks.md", "imgcompress"]
 
 [tool.ruff.lint]
@@ -136,6 +139,7 @@ plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 files = ["app"]
 ignore_missing_imports = true
+# imgcompress/ is a local-only reference; see the [tool.ruff] note.
 exclude = ["tests", "imgcompress"]
 
 [tool.pytest.ini_options]

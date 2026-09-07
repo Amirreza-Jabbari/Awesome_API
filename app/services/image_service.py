@@ -1,7 +1,7 @@
 """Local image processing: conversion, resizing, PDF and background removal.
 
-Capabilities ported from the ``imgcompress`` reference project and re-built on
-Awesome_API infrastructure. Design rules:
+Image conversion/resizing/PDF capabilities (inspired by common image-compression
+tools) implemented natively on Awesome_API infrastructure. Design rules:
 
 * Everything runs fully in-memory; inputs are bounded by the request middleware
   and an explicit pixel/byte budget, so uploaded pixels can never exhaust RAM.
