@@ -46,16 +46,33 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+lint = [
+    "ruff>=0.4,<1.0",
+]
+typecheck = [
+    "mypy>=1.9,<3.0",
+]
+test = [
+    "pytest>=9.0.3,<10.0",
+    "pytest-asyncio>=1.0.0,<2.0",
+    "pytest-cov>=4.1,<6.0",
+    "pytest-xdist>=3.6,<4.0",
+    "hypothesis>=6.100,<7.0",
+]
+audit = [
+    "pip-audit>=2.7,<3.0",
+]
 dev = [
     "pytest>=9.0.3,<10.0",
     "pytest-asyncio>=1.0.0,<2.0",
     "pytest-cov>=4.1,<6.0",
+    "pytest-xdist>=3.6,<4.0",
+    "hypothesis>=6.100,<7.0",
     "ruff>=0.4,<1.0",
     "mypy>=1.9,<3.0",
     "httpx>=0.27,<0.29",
     "httpcore>=1.0,<1.1",
     "pip-audit>=2.7,<3.0",
-    "hypothesis>=6.100,<7.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -75,21 +92,30 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "ASYNC", "RUF"]
 ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "S105", "S110", "S112", "S311"]
 # These service modules use a deliberately compact one-statement-per-line
 # style (kept intact by design). Silence only the style rules that result from
 # that choice; all other lint/type safety still applies.
 "app/services/toolbox_service.py" = ["E501", "E701", "E702", "SIM105"]
 "app/services/web_tools_service.py" = [
-    "E501", "E701", "E702", "ASYNC109", "N806", "N817", "SIM102", "SIM105",
+    "E501", "E701", "E702", "ASYNC109", "N806", "N817", "S101", "SIM102", "SIM105",
 ]
 "app/services/http_tools_service.py" = ["ASYNC109"]
-"app/services/browser_intelligence_service.py" = ["E501", "E701", "E702", "E703"]
+"app/services/browser_intelligence_service.py" = [
+    "E501", "E701", "E702", "E703", "S110", "S112",
+]
 "app/services/design_system_service.py" = ["E501", "E701", "E702", "E703"]
 "app/api/v1/browser_intelligence.py" = ["E501"]
 # Required network-backend interface: the timeout parameter is part of the
 # httpcore promise, not a caller-controlled timeout.
 "app/providers/web/ssrf.py" = ["ASYNC109"]
+# Security-rule exceptions reviewed at the time of introduction (kept stable):
+"app/core/config.py" = ["S104"]  # binds 0.0.0.0 by design for container deployments
+"app/schemas/toolbox.py" = ["S105"]  # "token_type" is an API field name, not a secret
+"app/services/mock_data_service.py" = ["S311"]  # deliberately non-cryptographic mock data
+"app/services/phone_service.py" = ["S110"]  # cleanup path where failures are intentionally ignored
+"app/services/dns_service.py" = ["S110"]  # best-effort resolver fallback branches
+"app/services/dns_tools_service.py" = ["S112"]  # per-record best-effort continuation
 
 [tool.mypy]
 python_version = "3.11"
@@ -107,3 +133,6 @@ addopts = "-ra"
 markers = [
     "integration: requires network access (deselect with '-m \"not integration\"')",
 ]
+
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:", "if __name__ == .__main__.:"]
