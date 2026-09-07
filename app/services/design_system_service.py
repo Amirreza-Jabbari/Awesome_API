@@ -11,8 +11,6 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
-from app.core.logging import get_logger
-
 from app.core.config import Settings
 from app.core.exceptions import (
     BrowserCapacityError,
@@ -21,6 +19,7 @@ from app.core.exceptions import (
     ResourceLimitError,
     SSRFBlockedError,
 )
+from app.core.logging import get_logger
 from app.providers.web.ssrf import SSRFGuard
 from app.schemas.design_system import (
     BreakpointToken,
@@ -457,6 +456,8 @@ class DesignSystemService:
             except Exception as exc:
                 raise ProviderUnavailableError("Browser context initialization failed.") from exc
             for index, viewport in enumerate(self._settings.design_system_viewports):
+                source_body: bytes | bytearray | None = None
+                snapshot: dict[str, Any] | None = None
                 if index:
                     await page.set_viewport_size(viewport)
                 try:
@@ -479,8 +480,6 @@ class DesignSystemService:
                     managed.warnings.append(WarningItem(code="VIEWPORT_NAVIGATION_FAILED", message="A responsive viewport could not be fully rendered."))
                     continue
                 await page.wait_for_timeout(self._settings.design_system_render_wait_ms)
-                source_body: bytes | bytearray | None = None
-                snapshot: dict[str, Any] | None = None
                 try:
                     snapshot = await page.evaluate(
                         _JS_SNAPSHOT.replace("MAX_CANDIDATES", str(self._settings.design_system_max_candidates))
@@ -676,7 +675,7 @@ class DesignSystemService:
             icon_counts["svg_use"] += int(signals.get("use", 0))
             icon_counts["icon_class"] += int(signals.get("iconClass", 0))
 
-        color_tokens = {}
+        color_tokens: dict[str, ColorToken] = {}
         for c, count in colors.most_common(40):
             sources = sorted(color_sources[c])
             confidence = self._confidence(count, direct="runtime_computed_style" in sources or "css_variable" in sources)
@@ -724,7 +723,7 @@ class DesignSystemService:
             component_info[name] = ComponentInfo(detected=True, occurrences=total, variants=variants, confidence=self._confidence(total, direct=True), sources=["component_pattern", "runtime_computed_style"])
 
         spacing_values = []
-        for i, (v, n) in enumerate(spacing.most_common(20)):
+        for v, n in spacing.most_common(20):
             spacing_values.append(Evidence(value=v, confidence=self._confidence(n), sources=["runtime_computed_style"], usage_count=n))
         base = self._infer_base_unit(list(spacing.keys()))
         spacing_conf = 0.8 if base else (0.6 if spacing else 0.0)
@@ -840,7 +839,7 @@ class DesignSystemService:
         for word in re.findall(r"[A-Za-z][A-Za-z0-9_-]{1,30}", cls):
             low = word.lower()
             if low in {"primary", "secondary", "success", "warning", "danger", "error", "outline", "ghost", "link", "small", "medium", "large", "sm", "md", "lg", "xl"}:
-                return low
+                return str(low)
         return "default"
 
     @staticmethod
