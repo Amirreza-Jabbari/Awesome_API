@@ -18,7 +18,8 @@ router = APIRouter(prefix="/web", tags=["Web Analysis"])
         "Renders a public HTTP(S) page in an isolated Chromium context through Playwright, "
         "then infers normalized design tokens from source CSS, runtime styles, computed CSS, "
         "DOM patterns and bounded responsive viewport analysis. Public pages only; authentication "
-        "and generic UI actions are not supported. Browser requests are subject to SSRF and resource policies."
+        "and generic UI actions are not supported. Browser requests are subject to "
+        "SSRF and resource policies."
     ),
     responses={
         422: {"description": "Invalid URL or SSRF/security policy rejection."},

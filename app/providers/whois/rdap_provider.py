@@ -57,7 +57,9 @@ class RDAPProvider:
                 "GET", url, timeout=self._timeout, follow_redirects=False
             ) as response:
                 if response.status_code >= 300:
-                    raise WHOISProviderError("RDAP upstream returned an unexpected redirect/status.")
+                    raise WHOISProviderError(
+                        "RDAP upstream returned an unexpected redirect/status."
+                    )
                 body = bytearray()
                 async for chunk in response.aiter_bytes():
                     body.extend(chunk)
@@ -116,7 +118,9 @@ class RDAPProvider:
         try:
             parsed_url = httpx.URL(url)
             hostname = parsed_url.host
-            addresses = await self._guard.resolve_and_check(hostname) if self._guard and hostname else []
+            addresses = (
+                await self._guard.resolve_and_check(hostname) if self._guard and hostname else []
+            )
             token = pin_address(hostname, addresses[0]) if addresses else None
             try:
                 async with self._client.stream(
@@ -130,7 +134,9 @@ class RDAPProvider:
                     async for chunk in resp.aiter_bytes():
                         body.extend(chunk)
                         if len(body) > self._max_response_bytes:
-                            raise ResourceLimitError("RDAP response exceeds the configured size limit.")
+                            raise ResourceLimitError(
+                                "RDAP response exceeds the configured size limit."
+                            )
                     import json
                     data = json.loads(bytes(body))
             finally:

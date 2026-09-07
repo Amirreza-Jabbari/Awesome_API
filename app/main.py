@@ -25,13 +25,13 @@ from app.core.exceptions import AwesomeAPIError
 from app.core.health import HealthService
 from app.core.logging import configure_logging, get_logger
 from app.core.metrics import NoopMetrics, build_metrics
-from app.core.openapi import customize_openapi
 from app.core.middleware import (
     RateLimitMiddleware,
     RequestContextMiddleware,
     RequestLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+from app.core.openapi import customize_openapi
 from app.core.ratelimit import build_rate_limiter
 from app.providers.dns.dns_python import DNSPythonProvider
 from app.providers.geoip.base import GeoIPProvider
@@ -49,8 +49,15 @@ from app.repositories.host_lists import (
     HostListRepository,
     MaliciousHostRepository,
 )
+from app.services.browser_intelligence_service import (
+    AccessibilityAuditService,
+    APIDiscoveryService,
+    CoreWebVitalsService,
+    ScreenshotService,
+)
 from app.services.cron_service import CronService
 from app.services.data_tools_service import DataToolsService
+from app.services.design_system_service import BrowserManager, DesignSystemService
 from app.services.dev_tools_service import DevToolsService
 from app.services.disposable_email_service import DisposableEmailService
 from app.services.dns_service import DNSService
@@ -69,8 +76,6 @@ from app.services.url_service import URLService
 from app.services.user_agent_service import UserAgentService
 from app.services.web_tools_service import WebToolsService
 from app.services.webpage_service import WebpageService
-from app.services.design_system_service import BrowserManager, DesignSystemService
-from app.services.browser_intelligence_service import AccessibilityAuditService, APIDiscoveryService, CoreWebVitalsService, ScreenshotService
 from app.services.whois_service import WhoIsService
 
 logger = get_logger(__name__)
@@ -191,9 +196,15 @@ def build_providers(settings: Settings) -> dict[str, Any]:
     # disable automatic redirects and validate each destination hop.
     webpage_service = WebpageService(http_client, ssrf_guard, settings, metrics=metrics)
     browser_manager = BrowserManager(settings, ssrf_guard)
-    design_system_service = DesignSystemService(browser_manager, ssrf_guard, settings, cache=cache, metrics=metrics)
-    accessibility_audit_service = AccessibilityAuditService(browser_manager, ssrf_guard, settings, cache=cache)
-    core_web_vitals_service = CoreWebVitalsService(browser_manager, ssrf_guard, settings, cache=cache)
+    design_system_service = DesignSystemService(
+        browser_manager, ssrf_guard, settings, cache=cache, metrics=metrics
+    )
+    accessibility_audit_service = AccessibilityAuditService(
+        browser_manager, ssrf_guard, settings, cache=cache
+    )
+    core_web_vitals_service = CoreWebVitalsService(
+        browser_manager, ssrf_guard, settings, cache=cache
+    )
     screenshot_service = ScreenshotService(browser_manager, ssrf_guard, settings, cache=cache)
     api_discovery_service = APIDiscoveryService(browser_manager, ssrf_guard, settings, cache=cache)
 
@@ -262,7 +273,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await browser_manager.start()
         except Exception:
             # Keep core API startup available; the design-system endpoint returns a controlled 503.
-            logger.exception("design_system_browser_start_failed", extra={"include_traceback": settings.debug})
+            logger.exception(
+                "design_system_browser_start_failed",
+                extra={"include_traceback": settings.debug},
+            )
     logger.info(
         "startup_complete env=%s geoip_provider=%s cache=%s rate_limit=%s",
         settings.app_env,
@@ -318,7 +332,10 @@ _openapi_tags = [
     {
         "name": "Web Analysis",
         "description": (
-            "Web analysis: browser-rendered design-system extraction, accessibility auditing, synthetic Core Web Vitals, screenshots, API discovery, webpage metadata, user-agent parsing, robots.txt, sitemap, "
+            "Web analysis: browser-rendered design-system extraction, accessibility "
+            "auditing, synthetic "
+            "Core Web Vitals, screenshots, API discovery, webpage metadata, user-agent parsing, "
+            "robots.txt, sitemap, "
             "Open Graph, website-technology detection, redirect tracing and canonical URLs."
         ),
     },
@@ -458,7 +475,11 @@ async def awesome_api_error_handler(request: Request, exc: AwesomeAPIError) -> J
         metrics.inc_security_rejection(exc.code.lower())
     request_id = request_id_for_response(request)
     logger.info("handled_error code=%s", exc.code)
-    public_message = exc.default_message if exc.status_code >= 502 or exc.code in {"SSRF_BLOCKED", "RESOLUTION_BLOCKED"} else exc.message
+    public_message = (
+        exc.default_message
+        if exc.status_code >= 502 or exc.code in {"SSRF_BLOCKED", "RESOLUTION_BLOCKED"}
+        else exc.message
+    )
     error: dict[str, Any] = {
         "code": exc.code,
         "message": public_message,

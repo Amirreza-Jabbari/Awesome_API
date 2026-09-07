@@ -188,7 +188,9 @@ class BrowserCapacityError(AwesomeAPIError):
 class AuthenticationRequiredError(AwesomeAPIError):
     code = "AUTHENTICATION_REQUIRED"
     status_code = 401
-    default_message = "The target website requires authentication; public extraction is not supported."
+    default_message = (
+        "The target website requires authentication; public extraction is not supported."
+    )
 
 
 class InvalidSelectorError(ValidationError):
