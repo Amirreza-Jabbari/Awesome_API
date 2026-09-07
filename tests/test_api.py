@@ -39,6 +39,7 @@ from app.services.dns_service import DNSService
 from app.services.domain_service import DomainService
 from app.services.email_service import EmailValidationService
 from app.services.http_tools_service import HTTPToolsService
+from app.services.image_service import ImageService
 from app.services.ip_service import IPService
 from app.services.mock_data_service import MockDataGenerator
 from app.services.mx_service import MXService
@@ -145,6 +146,7 @@ def _build_app() -> FastAPI:
         "http_tools_service": HTTPToolsService(tools_client, SSRFGuard(fake_dns), settings),
         "mock_data_service": MockDataGenerator(),
         "cron_service": CronService(),
+        "image_service": ImageService(settings),
     }
 
     @asynccontextmanager

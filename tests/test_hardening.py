@@ -137,7 +137,7 @@ def test_openapi_inventory_and_examples() -> None:
         for method in item
         if method.lower() in {"get", "post", "put", "patch", "delete", "head", "options"}
     )
-    assert operations == 72
+    assert operations == 77
     assert "/api/v1/jwt/inspect" in spec["paths"]
     assert "/health" in spec["paths"]
     for item in spec["paths"].values():

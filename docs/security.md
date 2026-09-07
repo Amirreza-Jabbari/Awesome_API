@@ -15,6 +15,8 @@ The service does not provide arbitrary proxying, credential injection into brows
 - JSON operations enforce body, depth and node budgets.
 - Mock/OpenAPI generation has bounded nesting and node generation.
 - Image metadata extraction enforces decoded-byte and pixel budgets before loading pixels.
+- The image processing endpoints enforce the same byte/pixel budgets plus explicit caps on output size, PDF page count, PDF DPI, rasterized total bytes, canvas dimension, target-size magnitude and concurrent processing. CPU-bound work runs in worker threads under a per-operation hard timeout and a concurrency semaphore, so a flood of large uploads cannot saturate cores. Everything runs on bounded in-memory buffers; no file is persisted between requests.
+- Outputs are re-encoded in memory, so EXIF/GPS metadata never survives conversion (metadata stripping is not optional); uploaded pixel data is decoded only within the pixel budget and never logged.
 - User regexes use the timeout-capable `regex` engine and a bounded input/match budget.
 
 ## JWT

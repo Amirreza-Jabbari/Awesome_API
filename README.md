@@ -272,6 +272,19 @@ the raw document at `/openapi.json`. Full schemas and error codes are in
 | POST | `/api/v1/content-type/detect` | Detect a web resource's content type |
 | POST | `/api/v1/image/metadata` | Extract image metadata from Base64 data |
 
+### Image Processing `5`
+
+Local, in-memory image conversion — uploads are processed on the server and
+returned as bytes; nothing is ever stored between requests.
+
+| Method | Endpoint | Utility |
+| --- | --- | --- |
+| GET | `/api/v1/image/formats` | List supported read/write formats and limits |
+| POST | `/api/v1/image/convert` | Convert/resize an image or flatten a PSD |
+| POST | `/api/v1/image/resize` | Resize by width and/or fit onto a canvas |
+| POST | `/api/v1/image/rasterize` | Render PDF pages to a ZIP of images |
+| POST | `/api/v1/image/background` | AI background removal (optional `image-ai` extra) |
+
 ### Time & Date `4`
 
 | Method | Endpoint | Utility |
@@ -323,6 +336,8 @@ cache/rate limiting.
 | `GEOIP_PROVIDER` | `free` | `none`, `free`, `ip-api`, or `maxmind` |
 | `METRICS_ENABLED` | `false` | Expose Prometheus `/metrics` |
 | `WEB_*`, `HTTP_*`, `MAX_*` | — | Per-utility and global resource limits |
+| `IMAGE_*` | — | Image processing budgets (pixel/byte/PDF limits) |
+| `IMAGE_BACKGROUND_REMOVAL_ENABLED` | `false` | Enable AI background removal (`pip install -e ".[image-ai]"`) |
 
 Rate-limited responses return `429` with `Retry-After` and `X-RateLimit-*`
 headers. The full environment table and hardening checklist are in

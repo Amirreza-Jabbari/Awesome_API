@@ -39,6 +39,7 @@ All endpoints are versioned under `/api/v1`. Interactive documentation is availa
 - Provider failures map to `502/503/504` (`PROVIDER_UNAVAILABLE`, `WHOIS_UNAVAILABLE`, `DNS_TIMEOUT`, ...). 
 - `429 RATE_LIMITED` when the per-IP limit is exceeded. 
 - `413 RESOURCE_LIMIT` for size/length caps.
+- Image tooling: `422 IMAGE_PROCESSING_ERROR`, `IMAGE_FORMAT_UNSUPPORTED`, `IMAGE_FEATURE_DISABLED`; `504 IMAGE_TIMEOUT` for processing that exceeds its time budget.
 
 ---
 
@@ -1115,6 +1116,110 @@ Fetches a URL through the secure web fetcher and reports the declared Content-Ty
 }
 ```
 Decodes Base64-encoded image data and extracts dimensions, format, color mode, EXIF tags (camera, date, GPS), ICC color profile and animation frame count using Pillow. Supports JPEG, PNG, GIF, WEBP, TIFF, BMP and more. No external service is queried.
+
+---
+
+## Image Processing
+
+Local, in-memory image conversion: raster re-encoding, image→PDF, PDF → per-page
+rasterization (ZIP), PSD flattening, HEIC/HEIF decode, target-size compression,
+canvas resizing and optional AI background removal. All uploads are processed in
+worker threads under a hard timeout and concurrency semaphore; outputs are
+re-encoded and **never carry EXIF/location metadata**, and nothing is stored on
+the server between requests.
+
+### Image Formats & Capabilities
+`GET /api/v1/image/formats`
+
+```json
+{
+  "read_formats": [".avif", ".bmp", ".gif", ".heic", ".heif", ...],
+  "write_formats": ["avif", "bmp", "ico", "jpeg", "pdf", "png", "tiff", "webp"],
+  "pdf_presets": ["a4-auto", "a4-landscape", "a4-portrait", "letter-auto", ...],
+  "pdf_scale_modes": ["fill", "fit"],
+  "pdf_quality_presets": { "high": 220, "medium": 150, "small": 96, "ultra": 300 },
+  "background_removal": { "enabled": false, "installed": false, "model": "u2net" },
+  "limits": {
+    "max_input_bytes": 7500000,
+    "max_pixels": 40000000,
+    "max_output_bytes": 15000000,
+    "max_pdf_pages": 50,
+    "max_pdf_dpi": 300,
+    "max_target_size_kb": 4000,
+    "max_concurrent": 2
+  }
+}
+```
+Reports the raster formats the deployment can read/write, available PDF presets
+and quality levels, whether AI background removal is enabled, and the enforced
+processing limits.
+
+### Image Converter
+`POST /api/v1/image/convert` — `multipart/form-data`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `file` | file | — | One raster image (JPEG/PNG/WEBP/AVIF/TIFF/BMP/GIF/ICO/HEIC/HEIF/PSD) |
+| `format` | string | — | `jpeg`, `png`, `webp`, `avif`, `ico`, `tiff`, `bmp` or `pdf` |
+| `quality` | int | `85` | Encoding quality, `1..100` (raster outputs) |
+| `width` | int | — | Optional downscale target width in pixels |
+| `target_size_kb` | int | — | Target output size in KB (JPEG/WebP/AVIF) |
+| `pdf_preset` | string | — | e.g. `a4-auto`, `letter-portrait`, `mobile-portrait`, `original` |
+| `pdf_scale` | string | `fit` | `fit` or `fill` |
+| `pdf_margin_mm` | number | — | PDF margin in millimetres (defaults to the preset) |
+| `pdf_paginate` | bool | `false` | Split a tall image across PDF pages |
+| `pdf_quality` | string | `high` | `small`, `medium`, `high` or `ultra` |
+
+Returns the converted file bytes with `Content-Disposition`, `X-Image-Format`,
+`X-Image-Bytes`, `X-Image-Width` and `X-Image-Height` headers. `target_size_kb`
+binary-searches the best JPEG/WebP/AVIF quality under the byte budget. PDF inputs
+are handled by `/api/v1/image/rasterize` instead.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/image/convert \
+  -F "file=@photo.png" -F "format=jpeg" -F "width=800"
+```
+
+### Image Resizer
+`POST /api/v1/image/resize` — `multipart/form-data`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `file` | file | — | Raster image |
+| `width` | int | — | Target width (aspect preserved) |
+| `canvas_width` / `canvas_height` | int | — | Both required together for canvas placement |
+| `mode` | string | `fit` | `fit` or `fill` placement on the canvas |
+| `margin_mm` | number | `0` | Canvas margin in millimetres |
+| `auto_rotate` | bool | `false` | Rotate the canvas to match image orientation |
+| `output_format` | string | `png` | `png`, `jpeg`, `webp`, `avif` or `bmp` |
+
+Shrinks to a target `width` (LANCZOS, aspect preserved) and/or places the image
+on a white canvas. Returns re-encoded bytes with the same `X-Image-*` headers.
+
+### PDF Rasterizer
+`POST /api/v1/image/rasterize` — `multipart/form-data`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `file` | file | — | PDF document |
+| `page_format` | string | `jpeg` | `jpeg` or `png` |
+| `dpi` | int | `150` | Rendering DPI (at least 36; capped server-side) |
+
+Renders each page into an image and returns a ZIP archive. Adds the
+`X-Image-Pages` response header with the page count. Page count and total
+output size are bounded by deployment limits.
+
+### AI Background Removal
+`POST /api/v1/image/background` — `multipart/form-data`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `file` | file | — | Raster image |
+| `output_format` | string | `png` | `png` or `avif` |
+
+Runs rembg (`u2net`) locally and returns a transparent PNG/AVIF. Disabled unless
+`IMAGE_BACKGROUND_REMOVAL_ENABLED=true` and the optional `[image-ai]` extra is
+installed; otherwise responds `422 IMAGE_FEATURE_DISABLED`.
 
 ---
 

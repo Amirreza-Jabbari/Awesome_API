@@ -39,6 +39,18 @@ in production, inject real values via your orchestrator. **Never commit `.env`.*
 | `WHOIS_TIMEOUT` / `RDAP_TIMEOUT` | `10` / `10`        | Registry lookup timeouts (seconds).                             |
 | `METRICS_ENABLED`            | `false`                | Expose `/metrics`.                                              |
 | `METRICS_PORT`               | `9090`                 | (informational) metrics port.                                   |
+| `IMAGE_WIDTH_MAX`            | `24000`                | Max resize/convert output width (pixels).                       |
+| `IMAGE_CANVAS_MAX_DIMENSION` | `8192`                 | Max canvas width/height for `/image/resize`.                    |
+| `IMAGE_TARGET_SIZE_MIN_KB`   | `8`                    | Minimum `target_size_kb` for image conversion.                  |
+| `IMAGE_TARGET_SIZE_MAX_KB`   | `4000`                 | Maximum `target_size_kb` for image conversion.                  |
+| `IMAGE_MAX_OUTPUT_BYTES`     | `15000000`             | Max single output file size (bytes).                            |
+| `IMAGE_MAX_PDF_PAGES`        | `50`                   | Max PDF pages for pagination and rasterization.                 |
+| `IMAGE_MAX_PDF_DPI`          | `300`                  | Cap for the rasterize DPI parameter.                            |
+| `IMAGE_MAX_RASTERIZE_BYTES`  | `40000000`             | Total ZIP size cap when rasterizing PDF pages.                  |
+| `IMAGE_MAX_CONCURRENT`       | `2`                    | Concurrent image operations per process.                        |
+| `IMAGE_TIMEOUT_SECONDS`      | `60`                   | Per-operation processing timeout (seconds).                     |
+| `IMAGE_BACKGROUND_REMOVAL_ENABLED` | `false`         | Enable AI background removal (needs the `[image-ai]` extra).    |
+| `IMAGE_REMBG_MODEL`          | `u2net`                | rembg model used by `/image/background`.                        |
 
 ## Run without Redis
 
