@@ -415,7 +415,7 @@ class DNSPythonProvider:
 
     async def resolve_a_aaaa(
         self,
-        domain: str,
+        host: str,
     ) -> list[str]:
         """
         Best-effort resolution of A and AAAA records.
@@ -427,7 +427,7 @@ class DNSPythonProvider:
         seen: set[str] = set()
 
         try:
-            a_records = await self._query(domain, "A")
+            a_records = await self._query(host, "A")
 
         except (
             DNSNoDataError,
@@ -446,7 +446,7 @@ class DNSPythonProvider:
                     addresses.append(address)
 
         try:
-            aaaa_records = await self._query(domain, "AAAA")
+            aaaa_records = await self._query(host, "AAAA")
 
         except (
             DNSNoDataError,
