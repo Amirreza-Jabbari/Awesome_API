@@ -18,7 +18,7 @@ import yaml
 from defusedxml.common import DefusedXmlException as _DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
-from app.core.exceptions import ValidationError, ResourceLimitError
+from app.core.exceptions import ResourceLimitError, ValidationError
 from app.core.limits import load_json_limited
 
 _MAX_DEPTH = 200
@@ -64,7 +64,9 @@ class DataToolsService:
         escaped = [part.replace("~", "~0").replace("/", "~1") for part in parts]
         return "/" + "/".join(escaped)
 
-    def _diff_walk(self, a: Any, b: Any, path: list[str], out: list[dict[str, Any]], depth: int = 0) -> None:
+    def _diff_walk(
+        self, a: Any, b: Any, path: list[str], out: list[dict[str, Any]], depth: int = 0
+    ) -> None:
         if depth > _MAX_DEPTH:
             raise ResourceLimitError("JSON document is too deeply nested.")
         if len(out) >= _MAX_JSON_NODES:
@@ -112,7 +114,9 @@ class DataToolsService:
                 "after": b,
             })
 
-    def _patch_walk(self, a: Any, b: Any, path: list[str], out: list[dict[str, Any]], depth: int = 0) -> None:
+    def _patch_walk(
+        self, a: Any, b: Any, path: list[str], out: list[dict[str, Any]], depth: int = 0
+    ) -> None:
         if depth > _MAX_DEPTH:
             raise ResourceLimitError("JSON document is too deeply nested.")
         if len(out) >= _MAX_JSON_NODES:
@@ -249,11 +253,11 @@ class DataToolsService:
             return result
         if isinstance(value, (list, tuple, set)):
             seen.add(marker)
-            result = [
+            out_items = [
                 DataToolsService._json_safe(v, depth + 1, seen, counter) for v in value
             ]
             seen.remove(marker)
-            return result
+            return out_items
         if isinstance(value, (datetime, date)):
             return value.isoformat()
         if isinstance(value, bytes):
