@@ -21,15 +21,14 @@ from typing import Any
 
 import httpcore
 import httpx
-
 from app.core.exceptions import ResolutionBlockedError
 from app.providers.dns.base import DNSProvider
 
 logger = logging.getLogger(__name__)
 
 
-_PINNED_ADDRESSES: ContextVar[dict[str, str]] = ContextVar(
-    "ssrf_pinned_addresses", default={}
+_PINNED_ADDRESSES: ContextVar[dict[str, str] | None] = ContextVar(
+    "ssrf_pinned_addresses", default=None
 )
 
 
@@ -51,7 +50,7 @@ class PinnedNetworkBackend(httpcore.AsyncNetworkBackend):
         local_address: str | None = None,
         socket_options: Any = None,
     ) -> Any:
-        pinned = _PINNED_ADDRESSES.get().get(host.lower(), host)
+        pinned = (_PINNED_ADDRESSES.get() or {}).get(host.lower(), host)
         return await self._fallback.connect_tcp(
             pinned,
             port,
@@ -61,13 +60,13 @@ class PinnedNetworkBackend(httpcore.AsyncNetworkBackend):
         )
 
 
-def pin_address(hostname: str, address: str) -> Token[dict[str, str]]:
-    current = dict(_PINNED_ADDRESSES.get())
+def pin_address(hostname: str, address: str) -> Token[dict[str, str] | None]:
+    current = dict(_PINNED_ADDRESSES.get() or {})
     current[hostname.lower()] = address
     return _PINNED_ADDRESSES.set(current)
 
 
-def unpin_address(token: Token[dict[str, str]]) -> None:
+def unpin_address(token: Token[dict[str, str] | None]) -> None:
     _PINNED_ADDRESSES.reset(token)
 
 
@@ -79,7 +78,7 @@ class SSRFHttpTransport(httpx.AsyncHTTPTransport):
         # AsyncHTTPTransport intentionally exposes no public network-backend
         # injection point. The underlying httpcore pool is stable across the
         # supported httpx 0.27-0.x range used by this project.
-        self._pool._network_backend = PinnedNetworkBackend()  # type: ignore[attr-defined]
+        self._pool._network_backend = PinnedNetworkBackend()
 
 class SSRFGuard:
     def __init__(self, resolver: DNSProvider) -> None:
