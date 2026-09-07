@@ -10,7 +10,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def _operation_name(method: str, path: str, operation: dict[str, Any]) -> str:
@@ -26,7 +26,7 @@ def load_openapi() -> dict[str, Any]:
 
     document = app.openapi()
     # Round-trip to ensure the generated artifact is JSON-serializable.
-    return json.loads(json.dumps(document))
+    return cast(dict[str, Any], json.loads(json.dumps(document)))
 
 
 def generate_python(spec: dict[str, Any]) -> str:
@@ -60,7 +60,8 @@ def generate_python(spec: dict[str, Any]) -> str:
         "        headers = {'Accept': 'application/json'}",
         "        if data is not None:",
         "            headers['Content-Type'] = 'application/json'",
-        "        request = Request(self.base_url + path, data=data, headers=headers, method=method)",
+        "        request = Request(self.base_url + path, data=data, headers=headers, "
+        "method=method)",
         "        try:",
         "            with urlopen(request, timeout=self.timeout) as response:",
         "                raw = response.read()",
@@ -110,7 +111,8 @@ def generate_typescript(spec: dict[str, Any]) -> str:
         "    try {",
         "      const response = await fetch(this.baseUrl.replace(/\\/$/, '') + path, {",
         "        method,",
-        "        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },",
+        "        headers: body === undefined ? { Accept: 'application/json' } : "
+        "{ Accept: 'application/json', 'Content-Type': 'application/json' },",
         "        body: body === undefined ? undefined : JSON.stringify(body),",
         "        signal: controller.signal,",
         "      });",
