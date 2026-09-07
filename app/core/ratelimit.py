@@ -82,7 +82,7 @@ class RedisRateLimiter:
     async def _ensure(self) -> Any:
         if self._redis is None:
             import redis.asyncio as aioredis
-            self._redis = aioredis.from_url(self._url, decode_responses=True)
+            self._redis = aioredis.from_url(self._url, decode_responses=True)  # type: ignore[no-untyped-call]
         return self._redis
 
     async def check(self, key: str, limit: int, window: int) -> RateLimitDecision:
