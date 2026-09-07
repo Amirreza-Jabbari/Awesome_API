@@ -11,15 +11,17 @@ import hashlib
 import re
 import time
 from contextlib import suppress
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, TypeGuard
 from urllib.parse import urljoin, urlparse
 
 from app.core.config import Settings
 from app.core.exceptions import (
     AuthenticationRequiredError,
     BrowserCapacityError,
+    ElementNotFoundError,
     InvalidSelectorError,
+    MultipleElementsError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     ResourceLimitError,
@@ -53,7 +55,7 @@ def _cache_key(kind: str, value: str) -> str:
     return f"browser-intelligence:{kind}:{ACCESS_VERSION}:{digest}"
 
 
-def _cache_enabled(cache: Any | None, settings: Settings) -> bool:
+def _cache_enabled(cache: Any | None, settings: Settings) -> TypeGuard[Any]:
     return cache is not None and settings.cache_enabled and settings.design_system_cache_ttl > 0
 
 _WCAG: dict[str, AuditWCAG] = {
@@ -115,10 +117,9 @@ async def _navigate(page: Any, url: str, settings: Settings) -> Any:
         if "timeout" in name:
             raise ProviderTimeoutError("Website navigation timed out.") from exc
         raise ProviderUnavailableError("Website navigation failed.") from exc
-    if response is not None and response.status in {401, 403}:
+    if response is not None and response.status == 401:
         # 403 is not necessarily authentication, but 401 is deterministic.
-        if response.status == 401:
-            raise AuthenticationRequiredError()
+        raise AuthenticationRequiredError()
     return response
 
 
@@ -158,7 +159,7 @@ class AccessibilityAuditService:
             )
             final_url = page.url or (response.url if response is not None else url)
             result = AccessibilityResponse(
-                url=url, final_url=final_url, fetched_at=datetime.now(timezone.utc),
+                url=url, final_url=final_url, fetched_at=datetime.now(UTC),
                 analysis=BrowserAnalysisMeta(duration_ms=int((time.perf_counter() - started) * 1000), resources_analyzed=managed.request_count, bytes_downloaded=managed.bytes_downloaded, partial=bool(managed.warnings)),
                 viewport={"width": int(viewport["width"]), "height": int(viewport["height"])},
                 elements_analyzed=int(payload.get("elements", 0)), summary=summary, issues=issues,
@@ -280,7 +281,7 @@ class CoreWebVitalsService:
             cached = await self._cache.get(cache_key)
             if isinstance(cached, dict):
                 with suppress(Exception): return WebVitalsResponse.model_validate(cached)
-        started=time.perf_counter(); managed,page=await _open_page(self._browser); warnings=[]; rows=[]
+        started=time.perf_counter(); managed,page=await _open_page(self._browser); warnings:list[str]=[]; rows=[]
         try:
             await _navigate(page,url,self._settings)
             await _settle(page,self._settings)
@@ -291,7 +292,7 @@ class CoreWebVitalsService:
                 raw=await page.evaluate(_VITALS_JS)
                 rows.append(self._normalize_vitals(raw,vp))
             final=page.url or url
-            result=WebVitalsResponse(url=url,final_url=final,fetched_at=datetime.now(timezone.utc),analysis=BrowserAnalysisMeta(duration_ms=int((time.perf_counter()-started)*1000),resources_analyzed=managed.request_count,bytes_downloaded=managed.bytes_downloaded,partial=bool(managed.warnings)),measurement_duration_ms=self._settings.web_vitals_measurement_ms,viewports=rows,warnings=[w.message for w in managed.warnings]+warnings)
+            result=WebVitalsResponse(url=url,final_url=final,fetched_at=datetime.now(UTC),analysis=BrowserAnalysisMeta(duration_ms=int((time.perf_counter()-started)*1000),resources_analyzed=managed.request_count,bytes_downloaded=managed.bytes_downloaded,partial=bool(managed.warnings)),measurement_duration_ms=self._settings.web_vitals_measurement_ms,viewports=rows,warnings=[w.message for w in managed.warnings]+warnings)
             if _cache_enabled(self._cache, self._settings):
                 with suppress(Exception): await self._cache.set(cache_key,result.model_dump(mode="json"),self._settings.design_system_cache_ttl)
             return result
@@ -308,8 +309,8 @@ class CoreWebVitalsService:
     @staticmethod
     def _normalize_vitals(raw: dict[str,Any], vp: dict[str,int]) -> WebVitalsViewport:
         fcp=CoreWebVitalsService._metric_ms(raw.get('fcp'),(1800,3000)); lcp=CoreWebVitalsService._metric_ms(raw.get('lcp'),(2500,4000))
-        cls_v=raw.get('cls'); cls=MetricValue(value=float(cls_v),status='good' if cls_v is not None and cls_v<=.1 else 'needs_improvement' if cls_v is not None and cls_v<=.25 else 'poor' if cls_v is not None else 'not_available',source='browser' if cls_v is not None else 'unavailable')
-        inp_v=raw.get('inp'); inp=CoreWebVitalsService._metric_ms(inp_v,(200,500));
+        cls_v=raw.get('cls'); cls=MetricValue(value=float(raw.get('cls') or 0),status='good' if cls_v is not None and cls_v<=.1 else 'needs_improvement' if cls_v is not None and cls_v<=.25 else 'poor' if cls_v is not None else 'not_available',source='browser' if cls_v is not None else 'unavailable')
+        inp_v=raw.get('inp'); inp=CoreWebVitalsService._metric_ms(inp_v,(200,500))
         ttfb=CoreWebVitalsService._metric_ms(raw.get('ttfb'),(800,1800))
         bottlenecks=[]
         if raw.get('jsBytes',0)>500_000: bottlenecks.append(PerformanceBottleneck(type='large_javascript',severity='warning',details='JavaScript transfer exceeded 500 KB.'))
@@ -377,17 +378,17 @@ class ScreenshotService:
             if selector:
                 try: count=await page.locator(selector).count()
                 except Exception as exc: raise InvalidSelectorError() from exc
-                if count==0: from app.core.exceptions import ElementNotFoundError; raise ElementNotFoundError()
-                if count>1: from app.core.exceptions import MultipleElementsError; raise MultipleElementsError()
+                if count==0: raise ElementNotFoundError()
+                if count>1: raise MultipleElementsError()
                 element=page.locator(selector); await element.scroll_into_view_if_needed()
                 data=await element.screenshot(type=fmt,quality=quality,animations='disabled',timeout=self._settings.screenshot_timeout_ms)
-                box=await element.bounding_box(); out_w=int(round((box or {}).get('width',width)*dpr)); out_h=int(round((box or {}).get('height',height)*dpr))
+                box=await element.bounding_box(); out_w=round((box or {}).get('width',width)*dpr); out_h=round((box or {}).get('height',height)*dpr)
             else:
                 data=await page.screenshot(type=fmt,quality=quality,full_page=full_page,animations='disabled',timeout=self._settings.screenshot_timeout_ms)
                 dims=await page.evaluate('({w: innerWidth, h: innerHeight, full: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)})')
                 out_w=int(dims['w']*dpr); out_h=int(dims['full'] if full_page else dims['h'])*int(dpr)
             if len(data)>self._settings.screenshot_max_bytes: raise ResourceLimitError('Screenshot exceeds the configured size limit.')
-            meta=ScreenshotResponseMeta(url=url,final_url=page.url or url,fetched_at=datetime.now(timezone.utc),width=max(1,out_w),height=max(1,out_h),format=fmt,bytes=len(data),full_page=full_page,selector=selector,partial=bool(managed.warnings))
+            meta=ScreenshotResponseMeta(url=url,final_url=page.url or url,fetched_at=datetime.now(UTC),width=max(1,out_w),height=max(1,out_h),format=fmt,bytes=len(data),full_page=full_page,selector=selector,partial=bool(managed.warnings))
             if _cache_enabled(self._cache, self._settings):
                 with suppress(Exception):
                     await self._cache.set(cache_key, {"data": base64.b64encode(data).decode("ascii"), "meta": meta.model_dump(mode="json")}, self._settings.design_system_cache_ttl)
@@ -411,7 +412,7 @@ class APIDiscoveryService:
             cached = await self._cache.get(cache_key)
             if isinstance(cached, dict):
                 with suppress(Exception): return DiscoveryResponse.model_validate(cached)
-        started=time.perf_counter(); managed,page=await _open_page(self._browser); endpoints:dict[tuple[str,str],DiscoveredEndpoint]={}; warnings=[]; observed=[]
+        started=time.perf_counter(); managed,page=await _open_page(self._browser); endpoints:dict[tuple[str,str],DiscoveredEndpoint]={}; warnings:list[str]=[]; observed=[]
         def origin(u:str)->str: return 'first_party' if urlparse(u).hostname==parsed.hostname else 'third_party'
         def add(u:str,method:str,typ:str,source:str,ct:str|None=None,status:int|None=None,conf:float=.8)->None:
             if urlparse(u).scheme not in {'http','https','ws','wss'}:
@@ -463,7 +464,7 @@ class APIDiscoveryService:
                             add(target,'GET',typ,'well_known',ct,int(probe.get('status',200)),.97 if typ=='openapi' else .82)
                 except Exception: continue
             final=page.url or url
-            result=DiscoveryResponse(url=url,final_url=final,fetched_at=datetime.now(timezone.utc),analysis=BrowserAnalysisMeta(duration_ms=int((time.perf_counter()-started)*1000),resources_analyzed=managed.request_count,bytes_downloaded=managed.bytes_downloaded,partial=bool(managed.warnings) or len(observed)>self._settings.api_discovery_max_requests),requests_observed=min(len(observed),self._settings.api_discovery_max_requests),endpoints_discovered=len(endpoints),openapi_documents=sum(x.type=='openapi' for x in endpoints.values()),graphql_endpoints=sum(x.type=='graphql' for x in endpoints.values()),websockets=sum(x.type=='websocket' for x in endpoints.values()),endpoints=list(endpoints.values()),partial=bool(managed.warnings) or len(observed)>self._settings.api_discovery_max_requests,warnings=[w.message for w in managed.warnings]+warnings)
+            result=DiscoveryResponse(url=url,final_url=final,fetched_at=datetime.now(UTC),analysis=BrowserAnalysisMeta(duration_ms=int((time.perf_counter()-started)*1000),resources_analyzed=managed.request_count,bytes_downloaded=managed.bytes_downloaded,partial=bool(managed.warnings) or len(observed)>self._settings.api_discovery_max_requests),requests_observed=min(len(observed),self._settings.api_discovery_max_requests),endpoints_discovered=len(endpoints),openapi_documents=sum(x.type=='openapi' for x in endpoints.values()),graphql_endpoints=sum(x.type=='graphql' for x in endpoints.values()),websockets=sum(x.type=='websocket' for x in endpoints.values()),endpoints=list(endpoints.values()),partial=bool(managed.warnings) or len(observed)>self._settings.api_discovery_max_requests,warnings=[w.message for w in managed.warnings]+warnings)
             if _cache_enabled(self._cache, self._settings):
                 with suppress(Exception): await self._cache.set(cache_key,result.model_dump(mode="json"),self._settings.design_system_cache_ttl)
             return result
