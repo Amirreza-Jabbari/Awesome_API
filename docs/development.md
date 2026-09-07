@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.11+ (Docker image uses 3.12)
+- Python 3.11+ (the production Docker image uses 3.11)
 - Optional: Redis 7 (only for shared caching / multi-instance rate limiting;
   not required for local dev)
 

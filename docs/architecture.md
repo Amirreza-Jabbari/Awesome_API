@@ -63,6 +63,16 @@ WHOIS/RDAP lookups prefer RDAP (structured, RFC-standardised) and fall back to
 legacy WHOIS. Providers raise domain exceptions (`app.core.exceptions`) so the
 service layer can degrade gracefully and map failures to clean HTTP statuses.
 
+### Local processing (images)
+
+`app/services/image_service.py` is a purely local pipeline with no external
+provider: it decodes, re-encodes, resizes, renders PDFs and (optionally) runs
+AI background removal entirely in memory. CPU/IO work runs in worker threads
+(`asyncio.to_thread`) behind a hard timeout and a concurrency semaphore, all
+upload and output sizes are bounded by centralized settings, and metadata
+(EXIF/GPS) is stripped during re-encoding. No file is written to disk between
+requests.
+
 ### GeoIP / IP-intelligence
 
 GeoIP and IP-intelligence providers return `None` for any field they cannot
