@@ -19,7 +19,6 @@ tests
 docker-compose*.yml
 Dockerfile
 Makefile
-README.md
 *.zip
 *.tar
 *.tar.gz
