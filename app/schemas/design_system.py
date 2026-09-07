@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -78,7 +77,7 @@ class WarningItem(BaseModel):
 class DesignSystemTokens(BaseModel):
     colors: dict[str, ColorToken] = Field(default_factory=dict)
     typography: dict[str, Evidence] = Field(default_factory=dict)
-    spacing: SpacingScale = Field(default_factory=SpacingScale)
+    spacing: SpacingScale = Field(default_factory=SpacingScale)  # type: ignore[arg-type]
     radii: dict[str, Evidence] = Field(default_factory=dict)
     borders: dict[str, Evidence] = Field(default_factory=dict)
     shadows: dict[str, Evidence] = Field(default_factory=dict)
