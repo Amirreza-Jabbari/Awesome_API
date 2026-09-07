@@ -15,6 +15,7 @@ All endpoints are versioned under `/api/v1`. Interactive documentation is availa
 - [Developer Tools](#developer-tools)
 - [Validation & Text](#validation--text)
 - [Files & Metadata](#files--metadata)
+- [Image Processing](#image-processing)
 - [Time & Date](#time--date)
 - [cURL Examples](#curl-examples)
 
@@ -1401,6 +1402,20 @@ curl -X POST http://localhost:8000/api/v1/canonical/check \
 curl -X POST http://localhost:8000/api/v1/image/metadata \
   -H "Content-Type: application/json" \
   -d '{"data":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...","filename":"photo.png"}'
+```
+
+**Image Converter:**
+```bash
+curl -X POST http://localhost:8000/api/v1/image/convert \
+  -F "file=@photo.png" -F "format=jpeg" -F "width=800" \
+  -o photo.jpg
+```
+
+**PDF Rasterizer:**
+```bash
+curl -X POST http://localhost:8000/api/v1/image/rasterize \
+  -F "file=@document.pdf" -F "page_format=jpeg" -F "dpi=150" \
+  -o pages.zip
 ```
 
 **Password Strength Analyzer:**
