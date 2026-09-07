@@ -156,6 +156,20 @@ class Settings(BaseSettings):
     max_image_pixels: int = 40_000_000
     max_upstream_response_bytes: int = 5_242_880
 
+    # Image processing (conversion, resizing, PDF generation/rasterization)
+    image_width_max: int = 24_000
+    image_canvas_max_dimension: int = 8_192
+    image_target_size_min_kb: int = 8
+    image_target_size_max_kb: int = 4_000
+    image_max_output_bytes: int = 15_000_000
+    image_max_pdf_pages: int = 50
+    image_max_pdf_dpi: int = 300
+    image_max_rasterize_bytes: int = 40_000_000
+    image_max_concurrent: int = 2
+    image_timeout_seconds: float = 60.0
+    image_background_removal_enabled: bool = False
+    image_rembg_model: str = "u2net"
+
     # Provider keys
     provider_api_key: str = ""
 
@@ -208,6 +222,33 @@ class Settings(BaseSettings):
         for viewport in self.design_system_viewports:
             if viewport.get("width", 0) <= 0 or viewport.get("height", 0) <= 0:
                 raise ValueError("Design System Extractor viewport dimensions must be positive.")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_image_processing(self) -> Settings:
+        image_numeric = (
+            self.image_width_max,
+            self.image_canvas_max_dimension,
+            self.image_target_size_min_kb,
+            self.image_target_size_max_kb,
+            self.image_max_output_bytes,
+            self.image_max_pdf_pages,
+            self.image_max_pdf_dpi,
+            self.image_max_rasterize_bytes,
+            self.image_max_concurrent,
+        )
+        if any(value <= 0 for value in image_numeric):
+            raise ValueError("Image processing resource limits must be positive.")
+        if self.image_timeout_seconds <= 0:
+            raise ValueError("Image processing timeout must be positive.")
+        if self.image_target_size_min_kb > self.image_target_size_max_kb:
+            raise ValueError("Image target-size minimum cannot exceed the maximum.")
+        if not 72 <= self.image_max_pdf_dpi <= 600:
+            raise ValueError("Image PDF rendering DPI must be between 72 and 600.")
+        if self.image_max_pdf_pages > 500:
+            raise ValueError("Image PDF page cap is unreasonably high; keep it at most 500.")
+        if not self.image_rembg_model.strip():
+            raise ValueError("Image background-removal model name cannot be empty.")
         return self
 
     # ---- Derived helpers -------------------------------------------------

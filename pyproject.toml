@@ -41,6 +41,11 @@ dependencies = [
     "sqlparse>=0.5,<1.0",
     "defusedxml>=0.7,<1.0",
     "Pillow>=10.2,<13.0",
+    "pillow-heif>=1.3,<2.0",
+    "fpdf2>=2.8,<3.0",
+    "pypdfium2>=4.30,<6.0",
+    "psd-tools>=1.9,<2.0",
+    "python-multipart>=0.0.9,<1.0",
     "regex>=2024.0.0,<2027.0.0",
     "playwright>=1.49,<2.0",
 ]
@@ -61,6 +66,13 @@ test = [
 ]
 audit = [
     "pip-audit>=2.7,<3.0",
+]
+# Optional heavy AI background-removal runtime (onnxruntime + ~170 MB model).
+# Not installed by default; the Image Service reports FEATURE_DISABLED until
+# this extra is present and IMAGE_BACKGROUND_REMOVAL_ENABLED=true.
+image-ai = [
+    "rembg>=2.0,<3.0",
+    "onnxruntime>=1.17,<2.0",
 ]
 dev = [
     "pytest>=9.0.3,<10.0",
@@ -85,7 +97,7 @@ app = ["py.typed"]
 line-length = 100
 target-version = "py311"
 src = ["app", "tests"]
-exclude = ["Tasks.md"]
+exclude = ["Tasks.md", "imgcompress"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "ASYNC", "RUF"]
@@ -124,7 +136,7 @@ plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 files = ["app"]
 ignore_missing_imports = true
-exclude = ["tests"]
+exclude = ["tests", "imgcompress"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

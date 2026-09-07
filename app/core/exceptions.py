@@ -212,3 +212,27 @@ class ResourceLimitError(AwesomeAPIError):
     code = "RESOURCE_LIMIT"
     status_code = 413
     default_message = "The requested resource exceeds the allowed limit."
+
+
+class ImageProcessingError(AwesomeAPIError):
+    """Base class for local image-processing failures."""
+
+    code = "IMAGE_PROCESSING_ERROR"
+    status_code = 422
+    default_message = "The supplied image could not be processed."
+
+
+class ImageFormatUnsupportedError(ImageProcessingError):
+    code = "IMAGE_FORMAT_UNSUPPORTED"
+    default_message = "The supplied image format is not supported."
+
+
+class ImageFeatureDisabledError(ImageProcessingError):
+    code = "IMAGE_FEATURE_DISABLED"
+    default_message = "The requested image feature is not enabled on this deployment."
+
+
+class ImageTimeoutError(ImageProcessingError):
+    code = "IMAGE_TIMEOUT"
+    status_code = 504
+    default_message = "Image processing timed out."
