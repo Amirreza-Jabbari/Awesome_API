@@ -29,6 +29,7 @@ id_ed25519*
 .hypothesis/
 .coverage
 .coverage.*
+coverage.json
 htmlcov/
 pip-wheel-metadata/
 
