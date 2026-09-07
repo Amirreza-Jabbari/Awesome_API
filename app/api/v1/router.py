@@ -19,6 +19,7 @@ from app.api.v1 import (
     domain,
     email,
     http_tools,
+    image_tools,
     ip,
     mx,
     password,
@@ -53,3 +54,4 @@ api_router.include_router(data_tools.router)
 api_router.include_router(http_tools.router)
 api_router.include_router(dev_tools.router)
 api_router.include_router(cron_tools.router)
+api_router.include_router(image_tools.router)

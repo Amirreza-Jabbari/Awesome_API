@@ -66,6 +66,7 @@ from app.services.domain_service import DomainService
 from app.services.email_service import EmailValidationService
 from app.services.file_metadata_service import FileMetadataService
 from app.services.http_tools_service import HTTPToolsService
+from app.services.image_service import ImageService
 from app.services.ip_service import IPService
 from app.services.mock_data_service import MockDataGenerator
 from app.services.mx_service import MXService
@@ -217,6 +218,7 @@ def build_providers(settings: Settings) -> dict[str, Any]:
     http_tools_service = HTTPToolsService(http_client, ssrf_guard, settings, metrics=metrics)
     mock_data_service = MockDataGenerator()
     cron_service = CronService()
+    image_service = ImageService(settings, metrics=metrics)
 
     return {
         "http_client": http_client,
@@ -254,6 +256,7 @@ def build_providers(settings: Settings) -> dict[str, Any]:
         "http_tools_service": http_tools_service,
         "mock_data_service": mock_data_service,
         "cron_service": cron_service,
+        "image_service": image_service,
         # Repositories shared with services.
         "disposable_email_repository": disposable_repo,
         "free_email_hosts_repository": free_hosts,
@@ -385,6 +388,15 @@ _openapi_tags = [
     {
         "name": "Time & Date",
         "description": "Time and date utilities: timestamp conversion and timezone lookup.",
+    },
+    {
+        "name": "Image Processing",
+        "description": (
+            "Image processing: raster format conversion, resizing, PDF generation "
+            "and rasterization, PSD flattening, HEIC/HEIF decoding, target-size "
+            "optimisation and optional AI background removal. All processing is "
+            "local and in-memory."
+        ),
     },
 ]
 

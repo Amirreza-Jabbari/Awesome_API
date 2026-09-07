@@ -130,3 +130,7 @@ def get_screenshot_service(request: Request) -> Any:
 
 def get_api_discovery_service(request: Request) -> Any:
     return request.app.state.api_discovery_service
+
+
+def get_image_service(request: Request) -> Any:
+    return request.app.state.image_service
