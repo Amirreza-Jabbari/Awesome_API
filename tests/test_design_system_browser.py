@@ -11,7 +11,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 import pytest
-
 from app.core.config import Settings
 from app.core.exceptions import ResolutionBlockedError
 from app.providers.web.ssrf import SSRFGuard
@@ -19,12 +18,23 @@ from app.services.design_system_service import BrowserManager, DesignSystemServi
 
 
 class _FixtureHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/runtime-design":
-            body = b"""<!doctype html><html><head><style>body{font-family:Inter,sans-serif}.btn{padding:8px 16px;border-radius:10px}</style></head><body><button class='btn primary'>Buy</button><script>const s=document.createElement('style');s.textContent=':root{--color-primary:#2563eb} .btn{background:#2563eb;color:#fff}';document.head.appendChild(s)</script></body></html>"""
+            body = (
+                b"""<!doctype html><html><head><style>body{font-family:Inter,sans-serif}"""
+                b""".btn{padding:8px 16px;border-radius:10px}</style></head><body>"""
+                b"""<button class='btn primary'>Buy</button>"""
+                b"<script>const s=document.createElement('style');"
+                b"""s.textContent=':root{--color-primary:#2563eb}"""
+                b""" .btn{background:#2563eb;color:#fff}';"""
+                b"""document.head.appendChild(s)</script></body></html>"""
+            )
         elif path == "/redirect-private":
-            self.send_response(302); self.send_header("Location", "http://127.0.0.1:1/"); self.end_headers(); return
+            self.send_response(302)
+            self.send_header("Location", "http://127.0.0.1:1/")
+            self.end_headers()
+            return
         else:
             body = b"<html><body>fixture</body></html>"
         self.send_response(200)
@@ -66,7 +76,11 @@ async def test_runtime_css_is_detected(fixture_server: str) -> None:
         import playwright.async_api  # noqa: F401
     except ImportError:
         pytest.skip("Playwright is not installed")
-    settings = Settings(app_env="test", cache_enabled=False, design_system_viewports=[{"width": 375, "height": 812}])
+    settings = Settings(
+        app_env="test",
+        cache_enabled=False,
+        design_system_viewports=[{"width": 375, "height": 812}],
+    )
     guard = _LoopbackGuard()
     browser = BrowserManager(settings, guard)
     try:

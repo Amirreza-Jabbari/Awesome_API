@@ -6,7 +6,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 import pytest
-
 from app.core.config import Settings
 from app.services.browser_intelligence_service import (
     AccessibilityAuditService,
@@ -37,10 +36,18 @@ def test_browser_intelligence_settings_are_bounded() -> None:
 
 
 class _Handler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/":
-            body = b"""<!doctype html><html lang='en'><head><title>Fixture</title><style>body{color:#333;background:#fff}button{background:#123;color:#fff}</style></head><body><main><h1>Fixture</h1><img src='/missing'><button>Run</button><script>const s=document.createElement('style');s.textContent=':root{--runtime:#2563eb}';document.head.appendChild(s); fetch('/api/data').catch(()=>{});</script></main></body></html>"""
+            body = (
+                b"""<!doctype html><html lang='en'><head><title>Fixture</title>"""
+                b"""<style>body{color:#333;background:#fff}"""
+                b"""button{background:#123;color:#fff}</style></head><body><main><h1>Fixture</h1>"""
+                b"<img src='/missing'><button>Run</button>"
+                b"<script>const s=document.createElement('style');"
+                b"""s.textContent=':root{--runtime:#2563eb}';document.head.appendChild(s);"""
+                b"""fetch('/api/data').catch(()=>{});</script></main></body></html>"""
+            )
         elif path == "/api/data":
             body = b'{"ok":true}'
             self.send_response(200)
