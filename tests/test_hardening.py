@@ -5,8 +5,8 @@ import asyncio
 import ipaddress
 
 import pytest
-
 from app.core.config import Settings
+from app.core.exceptions import ResolutionBlockedError, ValidationError
 from app.core.ratelimit import MemoryRateLimiter
 from app.providers.web.ssrf import SSRFGuard
 
@@ -65,14 +65,14 @@ async def test_ssrf_blocks_private_and_special_ranges() -> None:
     ]
     for address in blocked:
         guard = SSRFGuard(Resolver([address]))
-        with pytest.raises(Exception):
+        with pytest.raises(ResolutionBlockedError):
             await guard.resolve_and_check("example.com")
 
 
 @pytest.mark.asyncio
 async def test_ssrf_rejects_mixed_public_private_dns_results() -> None:
     guard = SSRFGuard(Resolver(["8.8.8.8", "10.0.0.1"]))
-    with pytest.raises(Exception):
+    with pytest.raises(ResolutionBlockedError):
         await guard.resolve_and_check("rebind.example")
 
 
@@ -96,8 +96,8 @@ def test_settings_include_hardening_defaults() -> None:
 
 
 def test_xml_entity_expansion_is_rejected() -> None:
-    from app.services.data_tools_service import DataToolsService
     from app.core.exceptions import AwesomeAPIError
+    from app.services.data_tools_service import DataToolsService
 
     xml = """<!DOCTYPE lolz [
       <!ENTITY lol "lol">
@@ -111,7 +111,7 @@ def test_yaml_recursive_alias_is_rejected() -> None:
     from app.services.data_tools_service import DataToolsService
 
     yaml_text = "a: &a [*a]"
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         DataToolsService().yaml_convert("yaml_to_json", yaml_text)
 
 
@@ -188,9 +188,9 @@ async def test_cache_concurrent_get_or_set_coalesces() -> None:
 
 
 def test_request_id_is_validated_and_returned() -> None:
+    from app.core.middleware import RequestContextMiddleware
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.core.middleware import RequestContextMiddleware
 
     app = FastAPI()
     app.add_middleware(RequestContextMiddleware, settings=Settings(app_env="test"))
