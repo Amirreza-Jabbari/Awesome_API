@@ -8,6 +8,7 @@ import re
 import time
 import uuid
 from contextvars import ContextVar
+from typing import Any, cast
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -15,7 +16,6 @@ from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import Settings
-from app.core.exceptions import ResourceLimitError
 from app.core.logging import get_logger
 from app.core.ratelimit import RateLimitDecision
 
@@ -225,7 +225,7 @@ class RequestLimitMiddleware:
     def _header(scope: Scope, name: bytes) -> bytes | None:
         for key, value in scope.get("headers", []):
             if key.lower() == name:
-                return value
+                return cast(bytes, value)
         return None
 
     def _request_id(self, scope: Scope) -> str:
@@ -286,7 +286,7 @@ class RequestLimitMiddleware:
                 body = message.get("body", b"")
                 total += len(body)
                 if total > limit:
-                    raise _RequestTooLarge
+                    raise _RequestTooLargeError
                 if b"application/json" in content_type:
                     for byte in body:
                         if in_string:
@@ -308,15 +308,19 @@ class RequestLimitMiddleware:
                             json_depth > self._settings.max_json_depth
                             or json_nodes > self._settings.max_json_nodes
                         ):
-                            raise _RequestTooDeep
-            return message
+                            raise _RequestTooDeepError
+            return cast(dict[str, Any], message)
 
         try:
             await self.app(scope, limited_receive, send)
-        except _RequestTooLarge:
+        except _RequestTooLargeError:
             await self._reject(send, "Request body exceeds the allowed size.", request_id)
-        except _RequestTooDeep:
-            await self._reject(send, "JSON structure exceeds the configured depth/node limit.", request_id)
+        except _RequestTooDeepError:
+            await self._reject(
+                send,
+                "JSON structure exceeds the configured depth/node limit.",
+                request_id,
+            )
 
     async def _reject(self, send: Send, message: str, request_id: str) -> None:
         import json
@@ -346,10 +350,10 @@ class RequestLimitMiddleware:
         await send({"type": "http.response.body", "body": body})
 
 
-class _RequestTooLarge(Exception):
+class _RequestTooLargeError(Exception):
     """Internal control-flow signal for the streaming request guard."""
 
 
-class _RequestTooDeep(Exception):
+class _RequestTooDeepError(Exception):
     """Internal control-flow signal for the JSON structural guard."""
 
