@@ -9,8 +9,10 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    browser_intelligence,
     cron_tools,
     data_tools,
+    design_system,
     dev_tools,
     disposable_email,
     dns,
@@ -26,8 +28,6 @@ from app.api.v1 import (
     user_agent,
     webpage,
     whois,
-    design_system,
-    browser_intelligence,
 )
 
 api_router = APIRouter()

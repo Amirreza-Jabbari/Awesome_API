@@ -9,6 +9,7 @@ import tempfile
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urljoin, urlparse
+
 from defusedxml import ElementTree as ET
 
 from app.core.exceptions import ProviderUnavailableError, ResolutionBlockedError, ResourceLimitError

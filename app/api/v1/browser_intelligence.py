@@ -17,8 +17,8 @@ from app.schemas.browser_intelligence import (
     WebVitalsResponse,
 )
 from app.services.browser_intelligence_service import (
-    APIDiscoveryService,
     AccessibilityAuditService,
+    APIDiscoveryService,
     CoreWebVitalsService,
     ScreenshotService,
 )

@@ -160,7 +160,7 @@ class Settings(BaseSettings):
     provider_api_key: str = ""
 
     @model_validator(mode="after")
-    def _validate_design_system(self) -> "Settings":
+    def _validate_design_system(self) -> Settings:
         numeric = (
             self.design_system_browser_startup_timeout_ms,
             self.design_system_browser_timeout_ms,

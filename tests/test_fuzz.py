@@ -1,12 +1,12 @@
 """Lightweight property-based tests; kept separate from normal deterministic CI."""
 from __future__ import annotations
 
-from hypothesis import given, settings, strategies as st
-
 from app.services.toolbox_service import ToolboxService
 from app.utils.domain import is_valid_domain
 from app.utils.ip import is_valid_ip
 from app.utils.url import normalize_url
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 
 @settings(max_examples=75, deadline=500)
